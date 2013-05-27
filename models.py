@@ -57,6 +57,8 @@ class Time_Period( models.Model ):
     time_period_category = models.CharField( max_length = 255, null = True, blank = True )
     time_period_label = models.CharField( max_length = 255, null = True, blank = True ) # could give each hour, etc. a separate identifier "start+1", "start+2", etc. - not naming _id to start, so you leave room for this to be a separate table.
     aggregate_index = models.IntegerField( null = True, blank = True ) # a separate index you can use to keep track of overall order within a time-series that you separate out into multiple types - "before" and "after", for example - time_period_index can be counter within before or after, aggregate index can be unique through both before and after.
+    project_name = models.CharField( max_length = 255, null = True, blank = True )
+    project_category = models.CharField( max_length = 255, null = True, blank = True )
 
     #============================================================================
     # Instance variables
@@ -349,7 +351,7 @@ class AbstractTimeSeriesDataModel( models.Model ):
 
 
 @python_2_unicode_compatible
-class BasicTimeSeriesData( AbstractTimeSeriesDataModel ):
+class Basic_Time_Series_Data( AbstractTimeSeriesDataModel ):
 
     #============================================================================
     # Django model fields from parent.
