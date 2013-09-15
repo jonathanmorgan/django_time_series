@@ -30,11 +30,15 @@ Contains django abstract model class for creating and storing time-series data
 '''
 
 # imports
+import datetime
 
 # django
 from django.db import models
 import django.utils.encoding
 from django.utils.encoding import python_2_unicode_compatible
+
+# python_utilities
+from python_utilities.exceptions.exception_helper import ExceptionHelper
 
 @python_2_unicode_compatible
 class Time_Period( models.Model ):
@@ -182,10 +186,15 @@ class AbstractTimeSeriesDataModel( models.Model ):
     match_count_9 = models.IntegerField( null = True, blank = True, default = 0 )
     filter_10 = models.BooleanField( default = False )
     match_count_10 = models.IntegerField( null = True, blank = True, default = 0 )
+    create_date = models.DateTimeField( auto_now_add = True )
+    last_update = models.DateTimeField( auto_now = True )
 
     #============================================================================
     # Instance variables
     #============================================================================
+    
+    
+    m_exception_helper = ExceptionHelper()
     
     
     #============================================================================
@@ -205,6 +214,102 @@ class AbstractTimeSeriesDataModel( models.Model ):
 
 
     @classmethod
+    def get_instance( cls,
+                      original_name_IN = "",
+                      original_id_IN = "",
+                      start_dt_IN = None,
+                      end_dt_IN = None,
+                      time_period_type_IN = "",
+                      time_period_category_IN = "",
+                      time_period_index_IN = -1,
+                      update_existing_IN = True,
+                      *args,
+                      **kwargs ):
+
+        '''
+        Accepts a subreddit full ID; start and end datetime; time period
+           type, category and index; and flag telling whether we are updating
+           existing.  If not updating existing, returns new instance.  If
+           updating, uses values to filter time-series records to find existing
+           record for a given subreddit in a given set.  If you are working with
+           existing time-series records created with make_data, to make it more
+           likely you'll get matches, pass the same values to these parameters
+           that you did when you created the data (so same time period type, time
+           period category, start and end date of the period, and index within
+           category).  If it finds none or more than one, returns None.
+                    
+        Parameters:
+        - original_name_IN - name of row we are trying to find time-series record(s) for.
+        - original_id_IN - original ID of row we are trying to find time-series record(s) for.
+        - start_dt_IN - datetime.datetime instance of date and time on which you want to start deriving time-series data.
+        - end_dt_IN - datetime.datetime instance of date and time on which you want to stop deriving time-series data.
+        - time_period_type_IN - (optional) time period type value you want stored in each time-series record.  Defaults to empty string.
+        - time_period_category_IN - (optional) category used in labeling.  If set, this was stored in time_period_category, appended to the front of an integer counter that counts up each time period, which was then stored in time_period_label.
+        '''
+        
+        # return reference
+        instance_OUT = None
+        
+        # declare variables
+        me = "get_instance"
+        update_existing = False
+        row_match_rs = None
+        debug_flag = True
+        
+        # updating existing?
+        update_existing = update_existing_IN
+
+        # Are we updating?
+        if ( ( update_existing ) and ( update_existing != None ) and ( update_existing == True ) ):
+
+            print( "In " + me )
+
+            # first, see if we can find a match for this row.  Can filter on
+            #    start date, end date, original name, original ID, category,
+            #    type, and/or index.
+            row_match_rs = cls.lookup_records( original_name_IN = original_name_IN,
+                                               original_id_IN = original_id_IN,
+                                               start_dt_IN = start_dt_IN,
+                                               end_dt_IN = end_dt_IN,
+                                               time_period_type_IN = time_period_type_IN,
+                                               time_period_category_IN = time_period_category_IN,
+                                               time_period_index_IN = time_period_index_IN )
+            
+            # check to see if we got anything back.
+            if ( row_match_rs.count() == 1 ):
+            
+                # found one - update it.
+                instance_OUT = row_match_rs[ 0 ]
+                print( "Found 1." )
+            
+            elif ( row_match_rs.count() > 1 ):
+            
+                # error - what to do?
+                instance_OUT = None
+                print( "More than one match found" )
+            
+            else:
+            
+                # no existing row - create new instance of this class.
+                instance_OUT = cls()
+                print( "Found 0." )
+                
+            #-- END check to see if we have an existing row to update. --#
+            
+        else:
+        
+            # not updating - create new row.
+            instance_OUT = cls()
+            print( "Not updating." )
+        
+        #-- END check to see if updating existing --#
+        
+        return instance_OUT
+        
+    #-- END method get_instance() --#
+
+
+    @classmethod
     def lookup_records( cls,
                         original_name_IN = "",
                         original_id_IN = "",
@@ -212,17 +317,19 @@ class AbstractTimeSeriesDataModel( models.Model ):
                         end_dt_IN = None,
                         time_period_type_IN = "",
                         time_period_category_IN = "",
+                        time_period_index_IN = -1,
                         *args,
                         **kwargs ):
 
         '''
-        Accepts an original name, origianl ID, start and end datetime, time period
-           type, and time period label.  Uses these values to filter time-series
-           records.  If you are working with existing time-series records
-           created with make_data, to make it more likely you'll get matches,
-           pass the same values to these parameters that you did when you created
-           the data (so same time period type, time period label, start and
-           end date of the period).
+        Accepts an original name, origianl ID, start and end datetime, time
+           period type, and time period label.  Uses these values to filter
+           time-series records.  If you are working with existing time-series
+           records created with make_data, to make it more likely you'll get
+           correct matches, pass the same values to these parameters that you did
+           when you created the data (so same time period type, time period
+           category, time period index, start and end date of the period, and
+           original ID).
                     
         Parameters:
         - original_name_IN - name of subreddit we are trying to find time-series record(s) for.
@@ -231,6 +338,7 @@ class AbstractTimeSeriesDataModel( models.Model ):
         - end_dt_IN - datetime.datetime instance of date and time on which you want to stop deriving time-series data.
         - time_period_type_IN - (optional) time period type value you want stored in each time-series record.  Defaults to empty string.
         - time_period_category_IN - (optional) label to use in labeling.  If set, this is appended to the front of an integer counter that counts up each time period, is stored in time_period_label.  If not set, the integer time period counter is the only thing stored in time period label.
+        - time_period_index_IN - (optional) index to keep track of time periods within a category.  Generated values are non-zero, so only included in filter if value is greater than 0.
         '''
         
         # return reference
@@ -285,11 +393,44 @@ class AbstractTimeSeriesDataModel( models.Model ):
         
         #-- END check for time period category value --#
         
+        # time period index
+        if ( ( time_period_index_IN ) and ( time_period_index_IN > 0 ) ):
+        
+            rs_OUT = rs_OUT.filter( time_period_index = time_period_index_IN )
+        
+        #-- END check for time period index value --#
+        
         return rs_OUT
 
     #-- END class method lookup_records --#
     
 
+    @classmethod
+    def process_exception( cls, exception_IN = None, message_IN = "", print_details_IN = True, *args, **kwargs ):
+    
+        # return reference
+        status_OUT = ""
+    
+        # declare variables
+        exception_helper = None
+        exception_message = ""
+        exception_status = ""
+
+        # Get exception helper class.
+        exception_helper = cls.m_exception_handler
+                                
+        # process the exception
+        exception_message = message_IN
+        exception_status = exception_helper.process_exception( exception_IN = exception_IN, message_IN = exception_message, print_details_IN = print_details_IN )
+        
+        # set status to description of exception
+        status_OUT = exception_helper.last_exception_details
+        
+        return status_OUT
+        
+    #-- END method process_exception() --#
+        
+        
     #============================================================================
     # instance methods
     #============================================================================
