@@ -262,7 +262,7 @@ class AbstractTimeSeriesDataModel( models.Model ):
         # Are we updating?
         if ( ( update_existing ) and ( update_existing != None ) and ( update_existing == True ) ):
 
-            print( "In " + me )
+            # print( "In " + me )
 
             # first, see if we can find a match for this row.  Can filter on
             #    start date, end date, original name, original ID, category,
@@ -280,19 +280,19 @@ class AbstractTimeSeriesDataModel( models.Model ):
             
                 # found one - update it.
                 instance_OUT = row_match_rs[ 0 ]
-                print( "Found 1." )
+                #print( "Found 1." )
             
             elif ( row_match_rs.count() > 1 ):
             
                 # error - what to do?
                 instance_OUT = None
-                print( "More than one match found" )
+                print( "In " + me + "(): More than one match found" )
             
             else:
             
                 # no existing row - create new instance of this class.
                 instance_OUT = cls()
-                print( "Found 0." )
+                #print( "Found 0." )
                 
             #-- END check to see if we have an existing row to update. --#
             
@@ -300,7 +300,7 @@ class AbstractTimeSeriesDataModel( models.Model ):
         
             # not updating - create new row.
             instance_OUT = cls()
-            print( "Not updating." )
+            #print( "Not updating." )
         
         #-- END check to see if updating existing --#
         
