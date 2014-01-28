@@ -145,6 +145,8 @@ class AbstractTimeSeriesDataModel( models.Model ):
     # constants-ish
     #============================================================================
 
+    DEBUG_FLAG = False
+
     # time period types
     TIME_PERIOD_HOURLY = "hourly"
 
@@ -254,7 +256,7 @@ class AbstractTimeSeriesDataModel( models.Model ):
         me = "get_instance"
         update_existing = False
         row_match_rs = None
-        debug_flag = True
+        debug_flag = cls.DEBUG_FLAG
         
         # updating existing?
         update_existing = update_existing_IN
@@ -262,7 +264,9 @@ class AbstractTimeSeriesDataModel( models.Model ):
         # Are we updating?
         if ( ( update_existing ) and ( update_existing != None ) and ( update_existing == True ) ):
 
-            # print( "In " + me )
+            if ( debug_flag == True ):
+                print( "In " + me + " - updating, looking up existing record" )
+            #-- END DEBUG --#
 
             # first, see if we can find a match for this row.  Can filter on
             #    start date, end date, original name, original ID, category,
@@ -280,19 +284,28 @@ class AbstractTimeSeriesDataModel( models.Model ):
             
                 # found one - update it.
                 instance_OUT = row_match_rs[ 0 ]
-                #print( "Found 1." )
+
+                if ( debug_flag == True ):
+                    print( "==> Found 1 ( id = " + str( instance_OUT.pk ) + " )." )
+                #-- END DEBUG --#
             
             elif ( row_match_rs.count() > 1 ):
             
                 # error - what to do?
                 instance_OUT = None
-                print( "In " + me + "(): More than one match found" )
+
+                if ( debug_flag == True ):
+                    print( "==> More than one match found ( " + str( row_match_rs.count() ) + " )" )
+                #-- END DEBUG --#
             
             else:
             
                 # no existing row - create new instance of this class.
                 instance_OUT = cls()
-                #print( "Found 0." )
+
+                if ( debug_flag == True ):
+                    print( "==> Found 0." )
+                #-- END DEBUG --#
                 
             #-- END check to see if we have an existing row to update. --#
             
@@ -300,7 +313,10 @@ class AbstractTimeSeriesDataModel( models.Model ):
         
             # not updating - create new row.
             instance_OUT = cls()
-            #print( "Not updating." )
+
+            if ( debug_flag == True ):
+                print( "In " + me + " - Not updating." )
+            #-- END DEBUG --#
         
         #-- END check to see if updating existing --#
         
